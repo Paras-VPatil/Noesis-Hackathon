@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { BookOpen, CheckCircle, RefreshCcw, FileText } from "lucide-react";
-import { studyApi } from "../../api/studyApi";
-import type { PracticeQuestion } from "../../types/document";
+import { BookOpen, CheckCircle, RefreshCcw, FileText, CheckCircle2 } from "lucide-react";
+import { studyApi, StudyTestResponse } from "../../api/studyApi";
 
 interface StudyModeTabProps {
     subjectId: string;
@@ -9,7 +8,7 @@ interface StudyModeTabProps {
 }
 
 export const StudyModeTab = ({ subjectId, subjectName }: StudyModeTabProps) => {
-    const [questions, setQuestions] = useState<PracticeQuestion[] | null>(null);
+    const [testData, setTestData] = useState<StudyTestResponse | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -18,10 +17,7 @@ export const StudyModeTab = ({ subjectId, subjectName }: StudyModeTabProps) => {
         setError(null);
         try {
             const generated = await studyApi.generatePracticeTest(subjectId);
-
-            // We expect the backend to give us exactly 5 MCQs and 3 short answers, 
-            // but for this UI prototype we'll render whatever complies with the PracticeQuestion type.
-            setQuestions(generated);
+            setTestData(generated);
         } catch (err) {
             console.error(err);
             setError("Failed to generate study materials.");
@@ -30,7 +26,7 @@ export const StudyModeTab = ({ subjectId, subjectName }: StudyModeTabProps) => {
         }
     };
 
-    if (!questions) {
+    if (!testData) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6 border border-blue-500/20">
@@ -77,49 +73,80 @@ export const StudyModeTab = ({ subjectId, subjectName }: StudyModeTabProps) => {
                     </button>
                 </div>
 
-                <div className="space-y-8">
-                    {questions.map((q, index) => {
-                        const isMCQ = q.options && q.options.length > 0;
-                        return (
-                            <div key={q.id} className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl shadow-sm">
-                                <div className="flex gap-4">
-                                    <span className="text-blue-500 font-bold text-lg select-none">Q{index + 1}.</span>
-                                    <div className="flex-1 space-y-4">
-                                        <p className="text-lg text-neutral-100 font-medium">{q.question}</p>
+                <div className="space-y-10">
+                    {/* MCQs Section */}
+                    <div>
+                        <h3 className="text-xl font-bold text-blue-400 mb-6 flex items-center gap-2">
+                            <CheckCircle2 size={24} /> Multiple Choice Section
+                        </h3>
+                        <div className="space-y-6">
+                            {testData.mcqs.map((q, index) => (
+                                <div key={index} className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl shadow-sm">
+                                    <div className="flex gap-4">
+                                        <span className="text-blue-500 font-bold text-lg select-none">Q{index + 1}.</span>
+                                        <div className="flex-1 space-y-4">
+                                            <p className="text-lg text-neutral-100 font-medium">{q.question}</p>
 
-                                        {isMCQ ? (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                                                {q.options!.map((opt, i) => (
-                                                    <div key={i} className={`p-4 rounded-lg border ${opt === q.answer ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-100" : "bg-neutral-950 border-neutral-800 text-neutral-400"}`}>
+                                                {q.options.map((opt, i) => (
+                                                    <div key={i} className={`p-4 rounded-lg border ${i === q.correctOptionIndex ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-100" : "bg-neutral-950 border-neutral-800 text-neutral-400"}`}>
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-5 h-5 rounded-full border flex-shrink-0 ${opt === q.answer ? "border-emerald-500 bg-emerald-500/20" : "border-neutral-700"}`} />
+                                                            <div className={`w-5 h-5 rounded-full border flex-shrink-0 ${i === q.correctOptionIndex ? "border-emerald-500 bg-emerald-500/20" : "border-neutral-700"}`} />
                                                             <span>{opt}</span>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
-                                        ) : (
-                                            <div className="bg-neutral-950 p-4 rounded-lg border border-neutral-800 mt-4">
-                                                <div className="text-xs text-neutral-500 font-bold mb-1 uppercase">Model Answer</div>
-                                                <p className="text-neutral-200">{q.answer}</p>
-                                            </div>
-                                        )}
 
-                                        <div className="mt-4 pt-4 border-t border-neutral-800 space-y-2">
-                                            <div className="text-sm text-neutral-300">
-                                                <span className="font-bold text-blue-400 mr-2">Explanation:</span>
-                                                {q.explanation}
-                                            </div>
-                                            <div className="text-xs flex items-center gap-1.5 text-neutral-500 bg-neutral-950 w-max px-2 py-1 rounded">
-                                                <FileText size={12} />
-                                                Source: <span className="font-semibold text-neutral-400">{q.sourceFormat || "Unknown"}</span> | {q.locationRef}
+                                            <div className="mt-4 pt-4 border-t border-neutral-800 space-y-2">
+                                                <div className="text-sm text-neutral-300">
+                                                    <span className="font-bold text-blue-400 mr-2">Explanation:</span>
+                                                    {q.explanation}
+                                                </div>
+                                                <div className="text-xs flex items-center gap-1.5 text-neutral-500 bg-neutral-950 w-max px-2 py-1 rounded">
+                                                    <FileText size={12} />
+                                                    Citation: [{q.sourceChunkId}]
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* SAQs Section */}
+                    <div>
+                        <h3 className="text-xl font-bold text-indigo-400 mb-6 flex items-center gap-2 pt-6 border-t border-neutral-800">
+                            <BookOpen size={24} /> Short Answer Section
+                        </h3>
+                        <div className="space-y-6">
+                            {testData.saqs.map((q, index) => (
+                                <div key={index} className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl shadow-sm border-l-4 border-l-indigo-500">
+                                    <div className="flex gap-4">
+                                        <span className="text-indigo-400 font-bold text-lg select-none">S{index + 1}.</span>
+                                        <div className="flex-1 space-y-4">
+                                            <p className="text-lg text-neutral-100 font-medium">{q.question}</p>
+
+                                            <div className="bg-neutral-950 p-4 rounded-lg border border-neutral-800 mt-4">
+                                                <div className="text-xs text-indigo-500/70 font-bold mb-2 uppercase flex items-center gap-1.5">
+                                                    Model Answer
+                                                </div>
+                                                <p className="text-neutral-200">{q.modelAnswer}</p>
+                                            </div>
+
+                                            <div className="mt-4 pt-4 border-t border-neutral-800">
+                                                <div className="text-xs flex items-center gap-1.5 text-neutral-500 bg-neutral-950 w-max px-2 py-1 rounded">
+                                                    <FileText size={12} />
+                                                    Citation: [{q.sourceChunkId}]
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

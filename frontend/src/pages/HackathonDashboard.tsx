@@ -14,14 +14,20 @@ const HackathonDashboard = () => {
     const [activeSubjectId, setActiveSubjectId] = useState<string>(FIXED_SUBJECTS[0].id);
     const [activeTab, setActiveTab] = useState<"chat" | "study">("chat");
     const [files, setFiles] = useState<File[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
 
     const activeSubject = FIXED_SUBJECTS.find((s) => s.id === activeSubjectId)!;
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            // In a real app, this would trigger an upload API call.
-            // For the dashboard UI, we just register them locally.
-            setFiles([...files, ...Array.from(e.target.files)]);
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setIsUploading(true);
+            const newFiles = Array.from(e.target.files);
+
+            // Simulate upload delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            setFiles([...files, ...newFiles]);
+            setIsUploading(false);
         }
     };
 
@@ -67,14 +73,14 @@ const HackathonDashboard = () => {
                     </div>
 
                     <div className="shrink-0 flex items-center">
-                        <label className="cursor-pointer bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-4 py-2 rounded-lg border border-neutral-700 flex items-center gap-2 transition-colors">
-                            <Upload size={16} />
-                            <span className="text-sm font-medium">Upload Notes (PDF/TXT)</span>
-                            <input type="file" multiple accept=".pdf,.txt" className="hidden" onChange={handleFileChange} />
+                        <label className={`cursor-pointer bg-neutral-800 text-neutral-200 px-4 py-2 rounded-lg border border-neutral-700 flex items-center gap-2 transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-700'}`}>
+                            {isUploading ? <span className="animate-spin text-blue-400">↻</span> : <Upload size={16} />}
+                            <span className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Notes (PDF/TXT)'}</span>
+                            <input type="file" multiple accept=".pdf,.txt" className="hidden" onChange={handleFileChange} disabled={isUploading} />
                         </label>
-                        {files.length > 0 && (
-                            <span className="ml-3 text-sm text-emerald-400 font-medium">
-                                {files.length} file(s) ready
+                        {!isUploading && files.length > 0 && (
+                            <span className="ml-3 text-sm text-emerald-400 font-medium flex items-center">
+                                ✓ {files.length} file(s) indexed
                             </span>
                         )}
                     </div>
