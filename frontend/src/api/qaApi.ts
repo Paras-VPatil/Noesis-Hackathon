@@ -52,18 +52,83 @@ const getConfidenceTier = (query: string) => {
   return "NOT_FOUND";
 };
 
+const normalizeSourceFormat = (value: string | undefined): Citation["sourceFormat"] => {
+  const normalized = (value ?? "TXT").toUpperCase();
+  if (
+    normalized === "PDF" ||
+    normalized === "DOCX" ||
+    normalized === "PPTX" ||
+    normalized === "XLSX" ||
+    normalized === "TXT" ||
+    normalized === "IMAGE" ||
+    normalized === "GDOC"
+  ) {
+    return normalized;
+  }
+  return "TXT";
+};
+
+const normalizeAnswerPayload = (payload: Record<string, unknown>): AnswerPayload => {
+  const rawConfidence = (payload.confidence ?? payload.confidenceTier ?? "NOT_FOUND") as string;
+  const confidence = (
+    rawConfidence === "HIGH" ||
+    rawConfidence === "MEDIUM" ||
+    rawConfidence === "LOW" ||
+    rawConfidence === "NOT_FOUND"
+      ? rawConfidence
+      : "NOT_FOUND"
+  ) as AnswerPayload["confidence"];
+
+  const citations = Array.isArray(payload.citations)
+    ? payload.citations.map((item) => {
+        const record = item as Record<string, string>;
+        return {
+          documentName: record.documentName ?? record.fileName,
+          location: record.location ?? record.locationRef,
+          fileName: record.fileName,
+          locationRef: record.locationRef,
+          chunkId: record.chunkId,
+          sourceFormat: normalizeSourceFormat(record.sourceFormat)
+        };
+      })
+    : [];
+
+  return {
+    answer: typeof payload.answer === "string" ? payload.answer : "",
+    confidence,
+    confidenceTier: confidence,
+    confidenceScore:
+      typeof payload.confidenceScore === "number" ? payload.confidenceScore : undefined,
+    citations,
+    evidenceSnippets: Array.isArray(payload.evidenceSnippets)
+      ? (payload.evidenceSnippets as string[])
+      : [],
+    sessionId: typeof payload.sessionId === "string" ? payload.sessionId : undefined
+  };
+};
+
+const createMockSessionId = () =>
+  `mock-session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 export const qaApi = {
-  async askQuestion(question: string, subject: Subject): Promise<AnswerPayload> {
+  async askQuestion(
+    question: string,
+    subject: Subject,
+    sessionId?: string
+  ): Promise<AnswerPayload> {
     if (import.meta.env.VITE_USE_REAL_API === "true") {
-      const response = await apiClient.post<AnswerPayload>("/qa/ask", {
+      const response = await apiClient.post<Record<string, unknown>>("/qa/ask", {
         question,
+        query: question,
+        sessionId,
         subjectId: subject.id
       });
-      return response.data;
+      return normalizeAnswerPayload(response.data);
     }
 
     await new Promise((resolve) => setTimeout(resolve, 550));
     const tier = getConfidenceTier(question);
+    const activeSessionId = sessionId ?? createMockSessionId();
     const match = Object.entries(mockEvidence).find(([keyword]) =>
       question.toLowerCase().includes(keyword)
     );
@@ -72,7 +137,9 @@ export const qaApi = {
       return {
         answer: `Not found in your notes for ${subject.name}`,
         confidence: "NOT_FOUND",
-        citations: []
+        citations: [],
+        evidenceSnippets: [],
+        sessionId: activeSessionId
       };
     }
 
@@ -87,14 +154,18 @@ export const qaApi = {
             location: "Section 2.3, Paragraph 4",
             sourceFormat: "DOCX"
           }
-        ]
+        ],
+        evidenceSnippets: [],
+        sessionId: activeSessionId
       };
     }
 
     return {
       answer: match?.[1].answer ?? "No relevant context found.",
       confidence: "HIGH",
-      citations: match?.[1].citations ?? []
+      citations: match?.[1].citations ?? [],
+      evidenceSnippets: [],
+      sessionId: activeSessionId
     };
   }
 };
