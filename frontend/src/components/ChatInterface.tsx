@@ -1,8 +1,8 @@
-import { Mic, MicOff, SendHorizonal } from "lucide-react";
+import { Mic, MicOff, SendHorizonal, Volume2, VolumeX } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { qaApi } from "../api/qaApi";
 import { useSubject } from "../hooks/useSubject";
-import type { AnswerPayload } from "../types/document";
+import type { AnswerPayload, Citation } from "../types/document";
 
 interface ChatMessage {
   id: string;
@@ -11,22 +11,46 @@ interface ChatMessage {
   payload?: AnswerPayload;
 }
 
+const buildSeedMessage = (subjectName: string): ChatMessage => ({
+  id: "assistant-seed",
+  role: "assistant",
+  text: `Ask any question from ${subjectName}. Answers are scoped only to your uploaded notes.`
+});
+
+const getConfidenceLabel = (payload?: AnswerPayload) =>
+  payload?.confidenceTier ?? payload?.confidence ?? "NOT_FOUND";
+
+const getCitationText = (citation: Citation) => ({
+  document: citation.documentName ?? citation.fileName ?? "Unknown source",
+  location: citation.location ?? citation.locationRef ?? "Unknown location"
+});
+
+const buildSpeechText = (message: ChatMessage) => {
+  const confidence = getConfidenceLabel(message.payload);
+  const citations = (message.payload?.citations ?? []).slice(0, 3).map((citation, index) => {
+    const label = getCitationText(citation);
+    return `Source ${index + 1}: ${label.document}, ${label.location}.`;
+  });
+
+  const citationSummary = citations.length ? citations.join(" ") : "No source citations available.";
+  return `${message.text} Confidence level: ${confidence}. ${citationSummary}`;
+};
+
 const ChatInterface = () => {
   const { selectedSubject } = useSubject();
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [isListening, setIsListening] = useState(false);
   const [sttError, setSttError] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "assistant-seed",
-      role: "assistant",
-      text: `Ask any question from ${selectedSubject.name}. Answers are scoped only to your uploaded notes.`
-    }
-  ]);
+  const [ttsError, setTtsError] = useState("");
+  const [activeSpeechMessageId, setActiveSpeechMessageId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([buildSeedMessage(selectedSubject.name)]);
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const voiceQueryRef = useRef("");
   const loadingRef = useRef(false);
+
   const speechRecognitionSupported = useMemo(
     () =>
       typeof window !== "undefined" &&
@@ -34,6 +58,45 @@ const ChatInterface = () => {
         typeof window.webkitSpeechRecognition !== "undefined"),
     []
   );
+
+  const speechSynthesisSupported = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      typeof SpeechSynthesisUtterance !== "undefined" &&
+      "speechSynthesis" in window,
+    []
+  );
+
+  const stopSpeech = () => {
+    if (!speechSynthesisSupported) {
+      return;
+    }
+    window.speechSynthesis.cancel();
+    setActiveSpeechMessageId(null);
+  };
+
+  const startSpeech = (message: ChatMessage) => {
+    if (!speechSynthesisSupported) {
+      setTtsError("Voice output is not supported in this browser.");
+      return;
+    }
+
+    stopSpeech();
+    setTtsError("");
+
+    const utterance = new SpeechSynthesisUtterance(buildSpeechText(message));
+    utterance.lang = "en-US";
+    utterance.rate = 0.96;
+    utterance.pitch = 1.0;
+    utterance.onend = () => setActiveSpeechMessageId(null);
+    utterance.onerror = () => {
+      setActiveSpeechMessageId(null);
+      setTtsError("Audio playback failed. Try again.");
+    };
+
+    setActiveSpeechMessageId(message.id);
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     loadingRef.current = loading;
@@ -44,9 +107,22 @@ const ChatInterface = () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
+      stopSpeech();
     },
     []
   );
+
+  useEffect(() => {
+    setSessionId(undefined);
+    setPrompt("");
+    setSttError("");
+    setTtsError("");
+    setIsListening(false);
+    voiceQueryRef.current = "";
+    recognitionRef.current?.stop();
+    stopSpeech();
+    setMessages([buildSeedMessage(selectedSubject.name)]);
+  }, [selectedSubject.id, selectedSubject.name]);
 
   const submitQuestionText = async (questionText: string) => {
     const trimmed = questionText.trim();
@@ -54,24 +130,29 @@ const ChatInterface = () => {
       return;
     }
 
+    stopSpeech();
     setLoading(true);
-    setMessages((current) => [
-      ...current,
-      { id: `user-${Date.now()}`, role: "user", text: trimmed }
-    ]);
+    setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text: trimmed }]);
     setPrompt("");
 
     try {
-      const answer = await qaApi.askQuestion(trimmed, selectedSubject);
-      setMessages((current) => [
-        ...current,
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          text: answer.answer,
-          payload: answer
-        }
-      ]);
+      const answer = await qaApi.askQuestion(trimmed, selectedSubject, sessionId);
+      if (answer.sessionId) {
+        setSessionId(answer.sessionId);
+      }
+
+      const assistantMessage: ChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        text: answer.answer,
+        payload: answer
+      };
+
+      setMessages((current) => [...current, assistantMessage]);
+
+      if (speechSynthesisSupported) {
+        startSpeech(assistantMessage);
+      }
     } catch {
       setMessages((current) => [
         ...current,
@@ -178,30 +259,59 @@ const ChatInterface = () => {
     }
   };
 
+  const toggleSpeechForMessage = (message: ChatMessage) => {
+    if (!message.payload) {
+      return;
+    }
+    if (activeSpeechMessageId === message.id) {
+      stopSpeech();
+      return;
+    }
+    startSpeech(message);
+  };
+
   return (
     <section className="panel chat-panel">
       <div className="panel-title-row">
         <h2>Subject-scoped Q&A</h2>
         <span className="pill">{selectedSubject.name}</span>
       </div>
+      {sessionId ? <p className="chat-status">Session active: {sessionId}</p> : null}
       {!speechRecognitionSupported ? (
         <p className="chat-status chat-status--error">Voice input is not supported in this browser.</p>
       ) : null}
+      {!speechSynthesisSupported ? (
+        <p className="chat-status chat-status--error">Voice output is not supported in this browser.</p>
+      ) : null}
       {isListening ? <p className="chat-status">Listening... speak your question.</p> : null}
       {sttError ? <p className="chat-status chat-status--error">{sttError}</p> : null}
+      {ttsError ? <p className="chat-status chat-status--error">{ttsError}</p> : null}
 
       <div className="chat-list">
         {messages.map((message) => (
           <article className={`chat-bubble chat-bubble--${message.role}`} key={message.id}>
             <p>{message.text}</p>
-            {message.payload?.citations?.length ? (
+            {message.role === "assistant" && message.payload ? (
               <footer>
-                <strong>{message.payload.confidence}</strong>
-                {message.payload.citations.map((citation) => (
-                  <span key={`${message.id}-${citation.location}`}>
-                    {citation.documentName} • {citation.location}
-                  </span>
-                ))}
+                <div className="chat-bubble-actions">
+                  <button
+                    type="button"
+                    onClick={() => toggleSpeechForMessage(message)}
+                    disabled={!speechSynthesisSupported}
+                  >
+                    {activeSpeechMessageId === message.id ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    {activeSpeechMessageId === message.id ? "Stop audio" : "Play audio"}
+                  </button>
+                </div>
+                <strong>{getConfidenceLabel(message.payload)}</strong>
+                {(message.payload.citations ?? []).map((citation, index) => {
+                  const label = getCitationText(citation);
+                  return (
+                    <span key={`${message.id}-${label.document}-${label.location}-${index}`}>
+                      {label.document} - {label.location}
+                    </span>
+                  );
+                })}
               </footer>
             ) : null}
           </article>

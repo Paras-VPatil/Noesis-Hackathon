@@ -34,9 +34,9 @@ SAFETY_SETTINGS = [
 
 SYSTEM_PROMPT = """
 You are AskMyNotes, a strict study assistant. You ONLY answer questions using the
-source material provided below in [SOURCE] blocks. 
+source material provided below in [SOURCE] blocks.
 
-RULES — you MUST follow ALL of them without exception:
+RULES - you MUST follow ALL of them without exception:
 1. NEVER use any knowledge outside the [SOURCE] blocks below.
 2. If the [SOURCE] blocks do not contain enough information -> respond EXACTLY:
    "Not found in your notes for {subject_name}"
@@ -46,10 +46,15 @@ RULES — you MUST follow ALL of them without exception:
 4. Do NOT rephrase, embellish, or add context not present in the sources.
 5. If sources partially answer the question -> answer only the part that is supported,
    and clearly state what could not be found.
-6. Confidence is pre-computed — your answer must match the confidence tier: {confidence_tier}
+6. Confidence is pre-computed - your answer must match the confidence tier: {confidence_tier}
    - HIGH: answer fully from sources
    - MEDIUM: answer but note uncertainty
    - LOW: answer fragments only and warn the student
+7. Conversation context below is ONLY for reference resolution (for example "it", "that",
+   "previous concept"). It is NOT a source of facts and MUST NOT be cited as evidence.
+
+CONVERSATION CONTEXT:
+{conversation_block}
 
 SOURCES:
 {sources_block}
@@ -309,6 +314,26 @@ def build_sources_block(chunks: list[dict]) -> str:
         )
     return "\n---\n".join(parts)
 
+def build_conversation_block(turns: Optional[List[dict]]) -> str:
+    """
+    Build a compact context block from previous turns in the same session.
+    This is for reference resolution only, not for factual grounding.
+    """
+    if not turns:
+        return "No prior turns in this session."
+
+    lines = []
+    for index, turn in enumerate(turns[-3:], start=1):
+        question = re.sub(r"\s+", " ", str(turn.get("query", ""))).strip()
+        answer = re.sub(r"\s+", " ", str(turn.get("answer", ""))).strip()
+        if len(answer) > 180:
+            answer = f"{answer[:180]}..."
+
+        lines.append(f"Turn {index} Question: {question}")
+        lines.append(f"Turn {index} Answer: {answer}")
+
+    return "\n".join(lines)
+
 def extract_citations(answer_text: str, chunks: list[dict]) -> list[dict]:
     """
     Parse out [SOURCE: name, loc] mentions and resolve them to specific chunk dicts.
@@ -359,7 +384,8 @@ async def ask_question(
     subject_id: str,
     subject_name: str,
     user_id: str,
-    n_results: int = 5
+    n_results: int = 5,
+    conversation_history: Optional[List[dict]] = None,
 ) -> dict:
     """
     Main RAG orchestration logic:
@@ -379,6 +405,7 @@ async def ask_question(
         subject_name: Display name of subject
         user_id: User making the request
         n_results: Number of results to retrieve (default 5)
+        conversation_history: Prior turns from the same session and subject
         
     Returns:
         Dictionary with answer, confidence, citations, and evidence
@@ -474,10 +501,12 @@ async def ask_question(
         
         # Step 6: Build grounded prompt
         sources_block = build_sources_block(chunk_dicts)
+        conversation_block = build_conversation_block(conversation_history)
         
         prompt = SYSTEM_PROMPT.format(
             subject_name=subject_name,
             confidence_tier=confidence["tier"],
+            conversation_block=conversation_block,
             sources_block=sources_block,
             query=cleaned_query
         )
@@ -509,6 +538,7 @@ async def ask_question(
                 "queryKeywords": keywords,
                 "multiQueries": multi_queries,
                 "retrievedChunks": len(chunk_dicts),
+                "contextTurnsUsed": len(conversation_history or []),
                 "confidenceDetails": confidence
             }
         }
@@ -518,3 +548,4 @@ async def ask_question(
     except Exception as e:
         logger.error(f"Unexpected error in RAG pipeline: {str(e)}")
         raise RAGError(f"RAG pipeline error: {str(e)}")
+

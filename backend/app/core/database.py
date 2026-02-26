@@ -46,10 +46,21 @@ async def _create_indexes(database: AsyncIOMotorDatabase) -> None:
     await database["qa_logs"].create_indexes(
         [
             IndexModel([("subjectId", ASCENDING)], name="ix_qalogs_subjectId"),
+            IndexModel([("sessionId", ASCENDING)], name="ix_qalogs_sessionId"),
             IndexModel(
                 [("subjectId", ASCENDING), ("confidenceTier", ASCENDING)],
                 name="ix_qalogs_subject_confidence",
             ),
+        ]
+    )
+
+    await database["conversation_turns"].create_indexes(
+        [
+            IndexModel(
+                [("sessionId", ASCENDING), ("subjectId", ASCENDING), ("createdAt", ASCENDING)],
+                name="ix_conversation_turns_session_subject_created",
+            ),
+            IndexModel([("userId", ASCENDING), ("createdAt", ASCENDING)], name="ix_conversation_turns_user_created"),
         ]
     )
 
