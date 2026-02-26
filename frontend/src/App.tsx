@@ -40,6 +40,37 @@ const App = () => {
     window.setTimeout(() => setToast(""), 2300);
   };
 
+  const isGameRoute = location.pathname === "/";
+
+  if (isGameRoute) {
+    return (
+      <>
+        <main className="interland-route-shell">
+          <Routes>
+            <Route
+              path="/"
+              element={<Home onOpenPracticeModal={() => setPracticeOpen(true)} onShowMessage={showToast} />}
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+
+        <StudyMode
+          open={practiceOpen}
+          onClose={() => setPracticeOpen(false)}
+          onGenerated={(message) => showToast(message)}
+        />
+        <StudyGuideModal
+          open={studyGuideOpen}
+          onClose={() => setStudyGuideOpen(false)}
+          onGenerated={(message) => showToast(message)}
+        />
+
+        {toast ? <div className="toast">{toast}</div> : null}
+      </>
+    );
+  }
+
   return (
     <div className="app-root">
       <Sidebar
