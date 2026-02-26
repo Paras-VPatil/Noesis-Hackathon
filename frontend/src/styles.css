@@ -757,6 +757,25 @@ textarea {
   color: var(--text);
 }
 
+.chat-voice-button {
+  min-width: 94px;
+}
+
+.chat-voice-button.is-listening {
+  background: linear-gradient(135deg, #ef5b6f 0%, #ff8f57 100%);
+}
+
+.chat-status {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chat-status--error {
+  color: #b2374f;
+}
+
 .format-filters {
   margin-top: 10px;
   display: flex;
