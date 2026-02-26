@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+google-generativeai
+chromadb
+langchain
+langchain-text-splitters
+PyMuPDF
+python-docx
+python-pptx
+pytesseract
+Pillow
+motor

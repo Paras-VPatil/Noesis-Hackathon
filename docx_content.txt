@@ -1,0 +1,135 @@
+1. Executive Summary
+AskMyNotes v2.0 is an AI-powered study assistant that accepts notes in 7 document formats — PDF, DOCX, PPTX, XLSX, TXT, Images (OCR), and Google Docs — and answers questions exclusively from a student's own uploaded materials. A mathematically-enforced confidence engine prevents hallucinations at the architecture level, a real-time Coverage Heatmap exposes blind spots across every document type, and a Targeted Remedial Review system closes learning loops with exact source text, never generated explanations.
+2. Problem Statement & Market Opportunity
+2.1 Four Compounding Student Problems
+2.2 The Three Core Innovations
+3. User Personas & Target Scenarios
+4. Multi-Format Document Processing Pipeline
+All 7 document formats are processed through a unified pipeline that normalizes content into 500-token chunks with 50-token overlap before embedding. Each format has a dedicated extractor that preserves format-specific metadata for accurate citations.
+4.1 Format-by-Format Processing Specification
+4.2 Unified Chunk Schema
+Every chunk, regardless of source format, is stored with this unified metadata schema in Pinecone:
+4.3 Async Processing Queue
+Large files (multi-page PDFs, high-res images) are processed asynchronously via Celery to prevent API timeouts:
+5. Phase 1 — MVP (Weeks 1–2)
+5.1 Multi-Format Document Upload & Unified Indexing
+Functional Requirements
+•         File size limits: 50MB per file, 10 files per account. Google Docs count as 1 file regardless of size.
+•         Supported formats on upload: PDF, DOCX, PPTX, XLSX, TXT, PNG, JPG. Google Docs via OAuth2 link.
+•         Format validation on upload: unsupported formats rejected with clear error message before processing begins
+•         Per-format extraction kicks off appropriate processor; all routed through unified LangChain chunking pipeline
+•         Chunk metadata written to PostgreSQL chunks table; vectors upserted to Pinecone namespace scoped to subjectId
+•         Upload progress tracked via WebSocket: 'Extracting text (2/5 pages)... Chunking... Embedding (45/200 chunks)...'
+•         Low OCR confidence (< 0.7) flagged in UI: 'Low OCR confidence on page 3 — text may be incomplete'
+Acceptance Criteria
+5.2 Confidence-Calibrated Answer Engine (Innovation 1)
+Confidence Tier Specification
+Multi-Format Citation Schema in Responses
+5.3 Study Mode — Basic Quiz Generation
+•         User selects study scope: single document, document type filter, or entire subject
+•         System samples 8 chunks randomly from selected scope; generates 5 MCQ + 3 SAQ via GPT-4 with source-only constraint
+•         Format diversity in quiz: if scope spans multiple formats, questions drawn proportionally from each
+•         Each question tagged with sourceChunkId and sourceFormat for downstream remedial extraction
+•         Immediate feedback: correct/incorrect per question with source citation
+•         Session stored: { sessionId, subjectId, score, questions[], answers[], sourceFormats[] }
+5.4 Authentication & Session Management
+•         JWT access tokens (15-min expiry) + refresh tokens (7-day rotation)
+•         bcrypt password hashing (cost factor 12)
+•         Dashboard: documents organized by format with format-type icons (PDF icon, Word icon, etc.)
+•         Document status indicators: Indexed / Processing / Extraction Failed / OCR Pending
+•         Google Docs: OAuth2 connection status + last sync timestamp per linked document
+6. Phase 2 — Core Innovations (Weeks 3–4)
+6.1 Document Coverage Heatmap (Innovation 2)
+Data Collection — Retrieval Logging
+Every chunk retrieval during Q&A and Study Mode writes to chunk_retrieval_log:
+Heatmap Visualization — Four Coverage Zones
+Format-Specific Heatmap Insights
+•         Filter heatmap by document type: 'Show only PowerPoint coverage' or 'Show only Google Docs coverage'
+•         Format-level summary cards: 'Your PPTX slides are 60% covered, but Excel reference tables are only 15% covered'
+•         Cross-format blind spot detection: 'Slide 12 (PPTX) and Page 45 (PDF) both cover Photosynthesis — Slide 12 has never been retrieved'
+•         Format diversity score: encourages students to study from all uploaded formats, not just their preferred one
+Blind Spot Alert System
+•         Proactive notification when section reaches 0% coverage after 3+ active study days
+•         Dashboard 'Blind Spot Panel': top 3 cold sections with format indicator, section title, and chunk count
+•         One-click 'Study This' → launches Study Mode pre-scoped to cold chunks from that specific format/section
+•         Weekly digest: 'This week you studied 67% of your Biology PDF but 0% of your Genetics PowerPoint'
+Example — Multi-Format Coverage Report
+6.2 Targeted Remedial Review System (Innovation 3)
+Remedial Flow — Multi-Format Source Extraction
+1.       Student completes Study Mode: 5 MCQ + 3 short-answer questions
+2.       System grades responses; identifies wrong-answer question IDs
+3.       For each wrong answer: fetch sourceChunkId stored at question generation time
+4.       Retrieve full chunk text from PostgreSQL + format-specific locationRef from metadata
+5.       Fetch 1–2 adjacent chunks from same document for surrounding context
+6.       Cross-format enrichment: search for related chunks on same concept from other uploaded formats
+7.       Compile Remedial Review Sheet: ordered by source format for visual clarity
+8.       Present sheet with retake option scoped to wrong-answer source chunks
+Remedial Review Sheet — Content per Wrong Answer
+Example — Remedial Review Sheet (Multi-Format)
+6.3 Enhanced Confidence Reporting Dashboard
+•         Session confidence distribution: % High / Medium / Not Found per session and over time
+•         Format-specific confidence analytics: 'Your PDF answers are 85% High Confidence; your OCR image answers are 60% High Confidence'
+•         Low confidence pattern detection: '12 consecutive NOT_FOUND queries about mitochondria — your notes may lack content on this topic'
+•         OCR quality alert: 'Image document has 65% average OCR confidence — consider uploading a cleaner scan for better results'
+7. Phase 3 — Advanced Features (Weeks 5–6)
+7.1 Adaptive Study Recommendations
+•         Algorithm identifies cold sections (< 20% coverage) across all formats; ranked by exam proximity
+•         Smart Study mode: queue automatically filled with questions from blind-spot chunks, prioritized by format diversity
+•         Format-aware recommendations: 'Your PowerPoint slides on Genetics (Slides 10–20) need review — 0% coverage'
+•         Coverage trend tracking: 'Evolution chapter improved from 5% to 38% this week after targeted study'
+7.2 Multi-Subject Dashboard
+•         Up to 10 subjects, each with documents across any mix of 7 formats
+•         Coverage heatmap with dual-axis filter: by subject AND by document format
+•         Cross-subject mixed quiz: questions drawn proportionally from all subjects + all formats
+•         Subject scorecards: coverage %, confidence distribution, quiz score trend, last active date
+•         Format usage analytics: 'In Physics, you rely 90% on PDF — your PPTX slides are underutilized'
+7.3 Gamification & Study Streaks
+•         Consecutive study day streak with loss-prevention push notification at 22:00
+•         Achievement badges: '100% Coverage Master' (all chunks queried per subject), 'Format Diversity Expert' (studied from 5+ formats), 'Perfect Score Streak' (3 consecutive 8/8)
+•         Coverage milestones at 25%, 50%, 75%, 100% per subject — animated celebration + badge
+•         Optional opt-in class leaderboard (privacy-controlled, no names by default — 'Student #3' anonymization)
+7.4 Advanced Remedial Learning Chains
+•         After wrong answer, system identifies prerequisite concept chunks from same and other documents
+•         Learning chain example: Student fails 'Photosynthesis' → Chain: 'Review Chloroplast Structure (PDF p.43) → Light Reactions (PPTX Slide 6) → Calvin Cycle (Google Doc, Section 3) → Then retry Photosynthesis (PDF p.45)'
+•         Chain generated via: semantic similarity graph traversal within subject namespace, ranking by conceptual dependency proximity
+•         Guided path: numbered steps with direct links to source section in each format
+7.5 Export & Collaborative Materials
+•         Generate study guide PDF from all High Confidence Q&A interactions, organized by source format
+•         Export Coverage Heatmap as PDF report showing format-level breakdown — shareable with study group
+•         Anki-compatible flashcard export from extracted text chunks across all formats
+•         Remedial Review Sheet export as formatted DOCX with all source citations
+•         Privacy-controlled share links: share coverage summary without exposing original documents
+8. Phase 4 — Polish & Scale (Weeks 7–8)
+8.1 Performance Optimization
+•         Redis caching: chunk text cached for 24h by chunkId — eliminates redundant Pinecone + DB lookups
+•         Batch vector search in Study Mode: all 8 question embeddings sent in single Pinecone batch call
+•         Lazy heatmap rendering: visible sections rendered first; off-screen zones loaded on scroll
+•         OCR caching: processed image results cached indefinitely — image hash as cache key; never re-OCR the same image
+•         Target latency: Q&A p95 < 1.5s; Study Mode generation p95 < 6s; Heatmap render < 500ms
+8.2 UX Refinements
+•         Dark mode with format-specific color coding preserved (PDF = red, PPTX = orange, etc.)
+•         Format filter tabs on heatmap: 'All | PDF | DOCX | PPTX | XLSX | TXT | Images | Google Docs'
+•         Keyboard shortcuts: space (next question), enter (submit), r (review source), f (filter format)
+•         Mobile-responsive: 320px–2560px; OCR upload works from phone camera
+•         WCAG 2.1 AA: screen reader support for heatmap tooltips; format icons include aria-label
+8.3 Monitoring & Analytics
+•         Sentry: exception capture with format-type tag — 'OCR failures', 'Google Docs sync timeouts', 'Pinecone latency spikes'
+•         Format processing success rate: alert if PDF extraction failure rate > 2%
+•         LLM cost attribution: cost per query by confidence tier; total saved by short-circuit NOT_FOUND responses
+•         User engagement by format: which document types drive most study sessions and highest quiz scores
+•         Celery queue depth monitoring: alert if job queue > 100 pending tasks
+9. Technology Stack — Complete Specification
+9.1 Backend Core
+9.2 Multi-Format Document Processing Libraries
+9.3 AI & Vector Database
+9.4 Database & Storage
+9.5 Frontend
+9.6 Infrastructure & DevOps
+9.7 Development Tools
+10. Core Data Models
+PostgreSQL Schema — Key Tables
+11. Competitive Differentiation
+12. Success Metrics
+12.1 Technical Metrics (Hackathon Demo)
+12.2 User Value Metrics (Post-Launch)
+13. Development Timeline — 8 Weeks
