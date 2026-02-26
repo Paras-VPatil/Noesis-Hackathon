@@ -27,7 +27,7 @@ async def upload_document(
     source_format = filename.split(".")[-1].lower() if "." in filename else "unknown"
     
     try:
-        # 2. Extract Text (with Gemini Vision OCR where needed)
+        # 2. Extract Text (with EasyOCR fallback where needed)
         extraction = await extract_text_from_file(content, filename)
         
         # 3. Create Document entry

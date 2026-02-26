@@ -1,7 +1,7 @@
 import google.generativeai as genai
 from app.core.config import settings
 import asyncio
-from typing import Optional
+import math
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,21 @@ RETRY_DELAY = 1.0  # seconds
 class EmbeddingError(Exception):
     """Custom exception for embedding operations."""
     pass
+
+def _stabilize_fallback_embedding(embedding: list[float]) -> list[float]:
+    """
+    Stabilize fallback embeddings by mean-centering and L2 normalization.
+    This is only used in rare mismatch fallback mode.
+    """
+    if not embedding:
+        return embedding
+
+    mean_val = sum(embedding) / len(embedding)
+    centered = [x - mean_val for x in embedding]
+    norm = math.sqrt(sum(x * x for x in centered))
+    if norm == 0:
+        return embedding
+    return [x / norm for x in centered]
 
 async def embed_chunks(chunks: list[dict], batch_size: int = 50) -> list[dict]:
     """
@@ -54,6 +69,20 @@ async def embed_chunks(chunks: list[dict], batch_size: int = 50) -> list[dict]:
         batch_chunks = chunks[i:i + batch_size]
         
         embeddings = await _embed_with_retry(batch_texts, TASK_TYPE_DOC)
+
+        # Defensive handling: some providers/mocks may return mismatched counts.
+        if len(embeddings) != len(batch_chunks):
+            logger.warning(
+                "Embedding count mismatch (expected %d, got %d). Falling back to per-chunk embedding.",
+                len(batch_chunks),
+                len(embeddings),
+            )
+            embeddings = []
+            for chunk in batch_chunks:
+                single = await _embed_with_retry([chunk["text"]], TASK_TYPE_DOC)
+                if not single:
+                    raise EmbeddingError("Failed to embed chunk during fallback mode")
+                embeddings.append(_stabilize_fallback_embedding(single[0]))
         
         for chunk, embedding in zip(batch_chunks, embeddings):
             chunk["embedding"] = embedding

@@ -10,6 +10,7 @@ langchain-text-splitters
 PyMuPDF
 python-docx
 python-pptx
-pytesseract
 Pillow
 motor
+easyocr
+numpy

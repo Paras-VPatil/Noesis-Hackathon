@@ -4,7 +4,7 @@ import logging
 import asyncio
 from typing import List, Tuple
 from .embedding_service import embed_query
-from app.vectorstore.chroma_client import get_collection
+from app.vectorstore import chroma_client
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ RULES — you MUST follow ALL of them without exception:
    "Not found in your notes for {subject_name}"
    Do NOT attempt to answer from memory. Do NOT guess. Do NOT fill gaps.
 3. Every factual claim in your answer MUST cite its source using:
-   [SOURCE: {filename}, {location_ref}]
+   [SOURCE: {{filename}}, {{location_ref}}]
 4. Do NOT rephrase, embellish, or add context not present in the sources.
 5. If sources partially answer the question -> answer only the part that is supported,
    and clearly state what could not be found.
@@ -235,16 +235,16 @@ def compute_confidence(
         keyword_bonus = min(0.05, (keyword_matches / len(chunk_texts)) * 0.10)
     
     # Weighted confidence calculation:
-    # - 85% max similarity (primary retrieval relevance)
-    # - 15% average similarity (consistency across results)
-    # - 5% standard deviation penalty (prefer consistent results)
-    # - 5% keyword matching bonus
+    # - 70% max similarity (primary retrieval relevance)
+    # - 25% average similarity (consistency across results)
+    # - 20% variance penalty (demote unstable retrieval)
+    # - up to +5% keyword matching bonus
     
     weighted = (
-        0.85 * max_score + 
-        0.15 * avg_score + 
+        0.75 * max_score + 
+        0.25 * avg_score + 
         keyword_bonus - 
-        (0.05 * std_dev)
+        (0.15 * variance)
     )
     
     # Clamp to [0, 1]
@@ -442,11 +442,16 @@ async def ask_question(
         # Step 3: Retrieval (scoped to subject collection)
         all_chunk_dicts = []
         try:
-            collection = get_collection(subject_id)
+            collection = None
             
             # Retrieve for each query (async potential if needed, but sequential is fine for 3 queries)
             for q in multi_queries:
-                q_embedding = await embed_query(q)
+                try:
+                    q_embedding = await embed_query(q)
+                except Exception as e:
+                    raise RAGError(f"Failed to embed query: {str(e)}")
+                if collection is None:
+                    collection = chroma_client.get_collection(subject_id)
                 results = collection.query(
                     query_embeddings=[q_embedding],
                     n_results=min(n_results, 8), # get slightly more to allow for re-ranking
@@ -466,6 +471,8 @@ async def ask_question(
                         cdict["similarity"] = similarities[i]
                         all_chunk_dicts.append(cdict)
                         
+        except RAGError:
+            raise
         except Exception as e:
             logger.error(f"Vector retrieval failed: {str(e)}")
             raise RAGError(f"Vector database error: {str(e)}")

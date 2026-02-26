@@ -1,6 +1,3 @@
-DEBUG    chromadb.config:config.py:363 Starting component System
-DEBUG    chromadb.config:config.py:363 Starting component Posthog
-DEBUG    datasets:config.py:54 PyTorch version 2.7.1+cu118 available.
 DEBUG    faker.factory:factory.py:78 Looking for locale `en_US` in provider `faker.providers.address`.
 DEBUG    faker.factory:factory.py:97 Provider `faker.providers.address` has been localized to `en_US`.
 DEBUG    faker.factory:factory.py:78 Looking for locale `en_US` in provider `faker.providers.automotive`.
@@ -46,30 +43,6 @@ DEBUG    faker.factory:factory.py:108 Provider `faker.providers.sbn` does not fe
 DEBUG    faker.factory:factory.py:78 Looking for locale `en_US` in provider `faker.providers.ssn`.
 DEBUG    faker.factory:factory.py:97 Provider `faker.providers.ssn` has been localized to `en_US`.
 DEBUG    faker.factory:factory.py:108 Provider `faker.providers.user_agent` does not feature localization. Specified locale `en_US` is not used for this provider.
-INFO     app.services.rag_service:rag_service.py:354 Extracted 1 citations from answer
-INFO     app.services.rag_service:rag_service.py:354 Extracted 0 citations from answer
-INFO     app.services.rag_service:rag_service.py:354 Extracted 1 citations from answer
-INFO     app.services.rag_service:rag_service.py:354 Extracted 1 citations from answer
-INFO     app.services.rag_service:rag_service.py:354 Extracted 1 citations from answer
-INFO     app.services.rag_service:rag_service.py:295 Deduplicated chunks: 3 -> 2
-INFO     app.services.rag_service:rag_service.py:295 Deduplicated chunks: 2 -> 1
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.rag_service:rag_service.py:392 Query for Biology: random question (keywords: ['random', 'question'])
-INFO     app.services.rag_service:rag_service.py:396 Generated 1 queries for retrieval
-DEBUG    app.services.rag_service:rag_service.py:411 Retrieved 0 results for query: random question
-INFO     app.services.rag_service:rag_service.py:442 No results found for query in Biology
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.rag_service:rag_service.py:392 Query for Biology: test question (keywords: ['test', 'question'])
-INFO     app.services.rag_service:rag_service.py:396 Generated 1 queries for retrieval
-ERROR    app.services.rag_service:rag_service.py:426 Vector retrieval failed: Embedding failed
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.rag_service:rag_service.py:392 Query for Biology: What is photosynthesis? (keywords: ['photosynthesis'])
-INFO     app.services.rag_service:rag_service.py:396 Generated 1 queries for retrieval
-DEBUG    app.services.rag_service:rag_service.py:411 Retrieved 0 results for query: What is photosynthesis?
-INFO     app.services.rag_service:rag_service.py:442 No results found for query in Biology
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
 INFO     app.services.chunking_service:chunking_service.py:53 Chunking biology_notes.pdf: 1249 chars
 INFO     app.services.chunking_service:chunking_service.py:70 Generated 3 chunks from biology_notes.pdf
 WARNING  app.services.chunking_service:chunking_service.py:50 Text too short (5 chars) for biology_notes.pdf
@@ -97,39 +70,64 @@ INFO     app.services.chunking_service:chunking_service.py:53 Chunking biology_n
 INFO     app.services.chunking_service:chunking_service.py:70 Generated 2 chunks from biology_notes.pdf
 INFO     app.services.chunking_service:chunking_service.py:53 Chunking biology_notes.pdf: 699 chars
 INFO     app.services.chunking_service:chunking_service.py:70 Generated 2 chunks from biology_notes.pdf
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:39 Embedding 1 chunks in batches of 50
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:39 Embedding 1 chunks in batches of 50
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:39 Embedding 1 chunks in batches of 50
-INFO     app.services.embedding_service:embedding_service.py:62 Successfully embedded 1 chunks
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:39 Embedding 25 chunks in batches of 10
-INFO     app.services.embedding_service:embedding_service.py:62 Successfully embedded 25 chunks
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:39 Embedding 1 chunks in batches of 50
-INFO     app.services.embedding_service:embedding_service.py:62 Successfully embedded 1 chunks
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:81 Embedding query: What is photosynthesis?...
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:81 Embedding query: What What What What What What What What What What ...
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-WARNING  app.services.embedding_service:embedding_service.py:114 Embedding attempt 1/3 failed: API Error
-WARNING  app.services.embedding_service:embedding_service.py:114 Embedding attempt 2/3 failed: Rate limit
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-WARNING  app.services.embedding_service:embedding_service.py:114 Embedding attempt 1/3 failed: API Error
-WARNING  app.services.embedding_service:embedding_service.py:114 Embedding attempt 2/3 failed: API Error
-WARNING  app.services.embedding_service:embedding_service.py:114 Embedding attempt 3/3 failed: API Error
-ERROR    app.services.embedding_service:embedding_service.py:120 Embedding failed after 3 retries
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:81 Embedding query: test question...
-INFO     app.services.embedding_service:embedding_service.py:81 Embedding query: test question...
-DEBUG    asyncio:proactor_events.py:633 Using proactor: IocpProactor
-INFO     app.services.embedding_service:embedding_service.py:39 Embedding 3 chunks in batches of 50
-INFO     app.services.embedding_service:embedding_service.py:62 Successfully embedded 1 chunks
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:54 Embedding 1 chunks in batches of 50
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:54 Embedding 1 chunks in batches of 50
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:54 Embedding 1 chunks in batches of 50
+INFO     app.services.embedding_service:embedding_service.py:91 Successfully embedded 1 chunks
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:54 Embedding 25 chunks in batches of 10
+INFO     app.services.embedding_service:embedding_service.py:91 Successfully embedded 25 chunks
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:54 Embedding 1 chunks in batches of 50
+INFO     app.services.embedding_service:embedding_service.py:91 Successfully embedded 1 chunks
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:110 Embedding query: What is photosynthesis?...
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:110 Embedding query: What What What What What What What What What What ...
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+WARNING  app.services.embedding_service:embedding_service.py:143 Embedding attempt 1/3 failed: API Error
+WARNING  app.services.embedding_service:embedding_service.py:143 Embedding attempt 2/3 failed: Rate limit
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+WARNING  app.services.embedding_service:embedding_service.py:143 Embedding attempt 1/3 failed: API Error
+WARNING  app.services.embedding_service:embedding_service.py:143 Embedding attempt 2/3 failed: API Error
+WARNING  app.services.embedding_service:embedding_service.py:143 Embedding attempt 3/3 failed: API Error
+ERROR    app.services.embedding_service:embedding_service.py:149 Embedding failed after 3 retries
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:110 Embedding query: test question...
+INFO     app.services.embedding_service:embedding_service.py:110 Embedding query: test question...
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.embedding_service:embedding_service.py:54 Embedding 3 chunks in batches of 50
+WARNING  app.services.embedding_service:embedding_service.py:75 Embedding count mismatch (expected 3, got 1). Falling back to per-chunk embedding.
+INFO     app.services.embedding_service:embedding_service.py:91 Successfully embedded 3 chunks
+INFO     app.services.rag_service:rag_service.py:356 Extracted 1 citations from answer
+INFO     app.services.rag_service:rag_service.py:356 Extracted 0 citations from answer
+INFO     app.services.rag_service:rag_service.py:356 Extracted 1 citations from answer
+INFO     app.services.rag_service:rag_service.py:356 Extracted 1 citations from answer
+INFO     app.services.rag_service:rag_service.py:356 Extracted 1 citations from answer
+INFO     app.services.rag_service:rag_service.py:297 Deduplicated chunks: 3 -> 2
+INFO     app.services.rag_service:rag_service.py:297 Deduplicated chunks: 2 -> 1
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.rag_service:rag_service.py:436 Query for Biology: random question (keywords: ['random', 'question'])
+INFO     app.services.rag_service:rag_service.py:440 Generated 1 queries for retrieval
+DEBUG    app.services.rag_service:rag_service.py:460 Retrieved 0 results for query: random question
+INFO     app.services.rag_service:rag_service.py:493 No results found for query in Biology
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.rag_service:rag_service.py:436 Query for Biology: test question (keywords: ['test', 'question'])
+INFO     app.services.rag_service:rag_service.py:440 Generated 1 queries for retrieval
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor
+INFO     app.services.rag_service:rag_service.py:436 Query for Biology: What is photosynthesis? (keywords: ['photosynthesis'])
+INFO     app.services.rag_service:rag_service.py:440 Generated 1 queries for retrieval
+DEBUG    app.services.rag_service:rag_service.py:460 Retrieved 1 results for query: What is photosynthesis?
+INFO     app.services.rag_service:rag_service.py:506 Confidence tier: HIGH (score: 1.0)
+INFO     app.services.rag_service:rag_service.py:356 Extracted 1 citations from answer
+INFO     app.services.rag_service:rag_service.py:557 Generated answer with 1 citations
+DEBUG    asyncio:proactor_events.py:631 Using proactor: IocpProactor

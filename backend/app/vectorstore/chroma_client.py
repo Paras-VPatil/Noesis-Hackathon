@@ -1,21 +1,34 @@
-import chromadb
-from chromadb.config import Settings
-from app.core.config import settings
 import os
 
-# Initialize the ChromaDB client with persistent storage
-os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)
+from app.core.config import settings
 
-chroma_client = chromadb.PersistentClient(
-    path=settings.CHROMA_PERSIST_DIRECTORY,
-    settings=Settings(anonymized_telemetry=False)
-)
+_chroma_import_error = None
+try:
+    import chromadb
+    from chromadb.config import Settings
+except Exception as exc:  # pragma: no cover - environment dependent
+    chromadb = None
+    Settings = None
+    _chroma_import_error = exc
+
+if chromadb is not None:
+    # Initialize the ChromaDB client with persistent storage
+    os.makedirs(settings.CHROMA_PERSIST_DIRECTORY, exist_ok=True)
+    chroma_client = chromadb.PersistentClient(
+        path=settings.CHROMA_PERSIST_DIRECTORY,
+        settings=Settings(anonymized_telemetry=False)
+    )
+else:
+    chroma_client = None
 
 def get_collection(subject_id: str):
     """
     Get or create a ChromaDB collection for a specific subject.
     Every subject gets its own namespace to strictly prevent cross-subject data bleed.
     """
+    if chroma_client is None:
+        raise RuntimeError(f"ChromaDB is unavailable in this environment: {_chroma_import_error}")
+
     collection_name = f"subject_{subject_id}"
     return chroma_client.get_or_create_collection(
         name=collection_name,
@@ -26,6 +39,9 @@ def delete_collection(subject_id: str):
     """
     Delete a subject's collection.
     """
+    if chroma_client is None:
+        return False
+
     collection_name = f"subject_{subject_id}"
     try:
         chroma_client.delete_collection(name=collection_name)
