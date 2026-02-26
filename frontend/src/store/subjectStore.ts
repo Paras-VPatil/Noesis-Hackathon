@@ -1,38 +1,38 @@
 import { useSyncExternalStore } from "react";
-import type { FolderItem, Subject } from "../types/subject";
+import type { Subject } from "../types/subject";
 
 interface SubjectState {
   selectedSubjectId: string;
   subjects: Subject[];
-  folders: FolderItem[];
 }
 
+const FIXED_SUBJECTS: Subject[] = [
+  {
+    id: "maths",
+    name: "Maths",
+    examLabel: "Core Subject",
+    documentCount: 0,
+    coverage: 0
+  },
+  {
+    id: "chemistry",
+    name: "Chemistry",
+    examLabel: "Core Subject",
+    documentCount: 0,
+    coverage: 0
+  },
+  {
+    id: "physics",
+    name: "Physics",
+    examLabel: "Core Subject",
+    documentCount: 0,
+    coverage: 0
+  }
+];
+
 let state: SubjectState = {
-  selectedSubjectId: "jee-main",
-  subjects: [
-    {
-      id: "jee-main",
-      name: "JEE Main",
-      examLabel: "Engineering Entrance",
-      documentCount: 5,
-      coverage: 62
-    },
-    {
-      id: "neet",
-      name: "NEET",
-      examLabel: "Medical Entrance",
-      documentCount: 4,
-      coverage: 38
-    },
-    {
-      id: "biology",
-      name: "Biology",
-      examLabel: "Subject Revision",
-      documentCount: 7,
-      coverage: 71
-    }
-  ],
-  folders: [{ id: "folder-1", name: "Unit Tests" }]
+  selectedSubjectId: FIXED_SUBJECTS[0].id,
+  subjects: FIXED_SUBJECTS
 };
 
 const listeners = new Set<() => void>();
@@ -46,18 +46,10 @@ export const subjectStore = {
     return () => listeners.delete(listener);
   },
   setSelectedSubject(subjectId: string) {
-    state = { ...state, selectedSubjectId: subjectId };
-    notify();
-  },
-  addFolder(name: string) {
-    const trimmed = name.trim();
-    if (!trimmed) {
+    if (!state.subjects.some((subject) => subject.id === subjectId)) {
       return;
     }
-    state = {
-      ...state,
-      folders: [...state.folders, { id: `folder-${Date.now()}`, name: trimmed }]
-    };
+    state = { ...state, selectedSubjectId: subjectId };
     notify();
   }
 };

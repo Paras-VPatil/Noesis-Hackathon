@@ -8,7 +8,6 @@ export const useSubject = () => {
   return {
     ...state,
     selectedSubject,
-    setSelectedSubject: subjectStore.setSelectedSubject,
-    addFolder: subjectStore.addFolder
+    setSelectedSubject: subjectStore.setSelectedSubject
   };
 };

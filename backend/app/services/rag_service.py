@@ -403,33 +403,36 @@ async def ask_question(
     subject_id: str,
     subject_name: str,
     user_id: str,
-    n_results: int = 5
+    history: list[dict[str, str]] | None = None
 ) -> dict:
     """
-    Main RAG orchestration logic:
-    1. Preprocess & validate query
-    2. Embed User Query
-    3. Vector Search (ChromaDB)
-    4. Deduplicate results
-    5. Gate through Confidence Score limits
-    6. Compile contextual sources
-    7. Prompt Gemini-1.5-Pro
-    8. Extract & validate citations
-    9. Formulate response payload
-    
-    Args:
-        query: User's question
-        subject_id: Subject ID for scoped search
-        subject_name: Display name of subject
-        user_id: User making the request
-        n_results: Number of results to retrieve (default 5)
-        
-    Returns:
-        Dictionary with answer, confidence, citations, and evidence
-        
-    Raises:
-        RAGError: If RAG pipeline fails
+    Main orchestration function for answering a question using RAG.
+    Now supports multi-turn history.
     """
+
+    # Main RAG orchestration logic:
+    # 1. Preprocess & validate query
+    # 2. Embed User Query
+    # 3. Vector Search (ChromaDB)
+    # 4. Deduplicate results
+    # 5. Gate through Confidence Score limits
+    # 6. Compile contextual sources
+    # 7. Prompt Gemini-1.5-Pro
+    # 8. Extract & validate citations
+    # 9. Formulate response payload
+    
+    # Args:
+    #     query: User's question
+    #     subject_id: Subject ID for scoped search
+    #     subject_name: Display name of subject
+    #     user_id: User making the request
+    #     n_results: Number of results to retrieve (default 5)
+        
+    # Returns:
+    #     Dictionary with answer, confidence, citations, and evidence
+        
+    # Raises:
+    #     RAGError: If RAG pipeline fails
     try:
         # Step 1: Preprocess query
         cleaned_query, keywords = _preprocess_query(query)
@@ -454,7 +457,7 @@ async def ask_question(
                     collection = chroma_client.get_collection(subject_id)
                 results = collection.query(
                     query_embeddings=[q_embedding],
-                    n_results=min(n_results, 8), # get slightly more to allow for re-ranking
+                    n_results=min(5, 8), # get slightly more to allow for re-ranking
                     include=["documents", "metadatas", "distances"]
                 )
                 logger.debug(f"Retrieved {len(results['documents'][0]) if results['documents'] else 0} results for query: {q}")
@@ -486,7 +489,7 @@ async def ask_question(
             chunk_dicts = await _rerank_chunks(cleaned_query, chunk_dicts)
         
         # Limit to final n_results for the prompt
-        chunk_dicts = chunk_dicts[:n_results]
+        chunk_dicts = chunk_dicts[:5] # n_results was removed, hardcoding to 5 as per original default
         
         # Handle empty results
         if not chunk_dicts:
@@ -516,11 +519,26 @@ async def ask_question(
         # Step 6: Build grounded prompt
         sources_block = build_sources_block(chunk_dicts)
         
-        prompt = SYSTEM_PROMPT.format(
-            subject_name=subject_name,
-            confidence_tier=confidence["tier"],
-            sources_block=sources_block,
-            query=cleaned_query
+        # Format chat history
+        history_block = ""
+        if history:
+            history_lines = ["Conversation History:"]
+            for turn in history[-5:]: # Keep last 5 turns to avoid token limit explosion
+                role = "User" if turn.get("role") == "user" else "Teacher"
+                history_lines.append(f"{role}: {turn.get('content')}")
+            history_lines.append("") # Add blank line before current question
+            history_block = "\n".join(history_lines)
+
+        prompt = (
+            f"You are a helpful study assistant answering questions strictly based on the provided notes for {subject_name}.\n"
+            f"You must answer ONLY using the information in the SOURCES below. Do not use outside knowledge.\n"
+            f"If the answer is not in the sources, reply exactly with: 'Not found in your notes for {subject_name}'\n"
+            f"You must cite your sources in line using the format [SOURCE: FileName, locationRef].\n"
+            f"If the user asks a follow-up question (like 'simplify it' or 'give an example'), use the Conversation History to understand what 'it' refers to, but STILL ONLY use the provided SOURCES to answer.\n\n"
+            f"{history_block}"
+            f"SOURCES:\n{sources_block}\n\n"
+            f"QUESTION: {query}\n"
+            f"ANSWER:"
         )
         
         # Step 7: Generate response

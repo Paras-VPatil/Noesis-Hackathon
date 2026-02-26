@@ -7,13 +7,9 @@ import StudyMode from "./components/StudyMode";
 import { useAuth } from "./hooks/useAuth";
 import { useSubject } from "./hooks/useSubject";
 import Dashboard from "./pages/Dashboard";
-import ExamSubjectPage from "./pages/ExamSubjectPage";
 import FlashcardsWorkspace from "./pages/FlashcardsWorkspace";
 import Home from "./pages/Home";
 import PlaceholderPage from "./pages/PlaceholderPage";
-import SubjectPage from "./pages/SubjectPage";
-import InterlandHub from "./pages/InterlandHub";
-import RealityRiver from "./pages/RealityRiver";
 
 const MissionGame = lazy(() => import("./components/MissionGame"));
 
@@ -21,7 +17,7 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { addFolder, folders, selectedSubject, setSelectedSubject } = useSubject();
+  const { selectedSubject, selectedSubjectId, setSelectedSubject, subjects } = useSubject();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -32,36 +28,31 @@ const App = () => {
 
   const searchPlaceholder = useMemo(() => {
     if (location.pathname === "/library") {
-      return "Search for practice tests";
+      return "Search evidence, snippets, citations";
     }
-    if (location.pathname === "/study-groups") {
-      return "Flashcard sets, textbooks, questions";
+    if (location.pathname === "/flashcards") {
+      return "Ask subject-scoped questions from your notes";
     }
-    return "Search for practice tests";
+    return "Search in AskMyNotes";
   }, [location.pathname]);
 
   const showToast = (message: string) => {
     setToast(message);
-    window.setTimeout(() => setToast(""), 2300);
+    window.setTimeout(() => setToast(""), 2400);
   };
 
   return (
     <div className="app-root">
       <Sidebar
         activePath={location.pathname}
-        folders={folders}
+        subjects={subjects}
+        selectedSubjectId={selectedSubjectId}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((current) => !current)}
-        onNavigate={(path) => {
-          if (path.startsWith("/subject/")) {
-            const subjectId = path.replace("/subject/", "");
-            setSelectedSubject(subjectId);
-          }
-          navigate(path);
-        }}
-        onAddFolder={() => {
-          addFolder(`Folder ${folders.length + 1}`);
-          showToast("New folder added.");
+        onNavigate={navigate}
+        onSelectSubject={(subjectId) => {
+          setSelectedSubject(subjectId);
+          showToast(`Active subject set to ${subjects.find((subject) => subject.id === subjectId)?.name ?? ""}.`);
         }}
       />
 
@@ -73,7 +64,7 @@ const App = () => {
           onSearchChange={setSearchValue}
           onOpenPracticeModal={() => setPracticeOpen(true)}
           onOpenStudyGuidesModal={() => setStudyGuideOpen(true)}
-          onProfileClick={() => showToast("Profile menu will be connected with auth settings.")}
+          onProfileClick={() => showToast("Profile menu can be connected to auth settings.")}
         />
 
         <div className="page-scroll">
@@ -89,7 +80,6 @@ const App = () => {
               }
             />
             <Route path="/library" element={<Dashboard />} />
-            <Route path="/study-groups" element={<SubjectPage />} />
             <Route
               path="/flashcards"
               element={
@@ -99,18 +89,15 @@ const App = () => {
                 />
               }
             />
-            <Route path="/subject/:subjectId" element={<ExamSubjectPage />} />
             <Route
               path="/notifications"
               element={
                 <PlaceholderPage
                   title="Notifications"
-                  description="You're all caught up. Notification actions can be wired to backend events later."
+                  description="You're all caught up. Alerts will appear when new note-derived missions are ready."
                 />
               }
             />
-            <Route path="/interland" element={<InterlandHub />} />
-            <Route path="/interland/river" element={<RealityRiver />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
@@ -121,6 +108,7 @@ const App = () => {
         onClose={() => setPracticeOpen(false)}
         onGenerated={(message) => showToast(message)}
       />
+
       <Suspense fallback={null}>
         <MissionGame
           open={missionOpen}
@@ -129,6 +117,7 @@ const App = () => {
           onShowMessage={showToast}
         />
       </Suspense>
+
       <StudyGuideModal
         open={studyGuideOpen}
         onClose={() => setStudyGuideOpen(false)}

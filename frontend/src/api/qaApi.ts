@@ -139,14 +139,28 @@ const normalizeResponse = (payload: Partial<AnswerPayload>, subjectName: string)
 };
 
 export const qaApi = {
-  async askQuestion(question: string, subject: Subject): Promise<AnswerPayload> {
+  async askQuestion(question: string, subject: Subject, history?: any[]): Promise<AnswerPayload> {
     if (import.meta.env.VITE_USE_REAL_API === "true") {
       const subjectId = await ensureBackendSubject(subject);
       const result = await tryPost<AnswerPayload>("/qa", {
         query: question,
-        subjectId
+        subjectId,
+        history
       });
       return normalizeResponse(result, subject.name);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    // Simulate multi-turn memory if history exists and user asks a follow-up
+    if (history && history.length > 0 && question.toLowerCase().includes("simplify")) {
+      return normalizeResponse({
+        answer: "In simpler terms based on our conversation, it means energy from the sun is captured to make food (glucose) for the plant! [SOURCE: Biology_Notes.pdf, Page 45]",
+        confidenceTier: "HIGH",
+        confidenceScore: 0.98,
+        citations: [{ fileName: "Biology_Notes.pdf", locationRef: "Page 45", chunkId: "c1", sourceFormat: "PDF" }],
+        evidenceSnippets: ["[Biology_Notes.pdf | Page 45] Photosynthesis occurs in chloroplasts where light energy is transformed to glucose."]
+      }, subject.name);
     }
 
     await new Promise((resolve) => setTimeout(resolve, 450));

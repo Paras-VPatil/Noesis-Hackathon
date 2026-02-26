@@ -12,6 +12,20 @@ MOCK_USER_ID = "user_123"
 async def ask(request: QARequest):
     db = get_db()
     
+from fastapi import APIRouter, HTTPException
+from app.schemas.qa_schema import QARequest, QAResponse
+from app.services.rag_service import ask_question
+from app.core.database import get_db
+from datetime import datetime
+import uuid
+
+router = APIRouter()
+MOCK_USER_ID = "user_123"
+
+@router.post("/", response_model=QAResponse)
+async def ask(request: QARequest):
+    db = get_db()
+    
     # Fetch subject name for the prompt
     subject = await db.subjects.find_one({"id": request.subjectId})
     if not subject:
@@ -23,7 +37,8 @@ async def ask(request: QARequest):
             query=request.query,
             subject_id=request.subjectId,
             subject_name=subject["name"],
-            user_id=MOCK_USER_ID
+            user_id=MOCK_USER_ID,
+            history=request.history
         )
         
         # Log the Q&A interaction for heatmap/analytics

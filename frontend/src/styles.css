@@ -129,6 +129,10 @@ textarea {
   background: linear-gradient(90deg, #e8edff 0%, #def9ff 100%);
 }
 
+.sidebar-section button.active {
+  background: linear-gradient(90deg, #e8edff 0%, #def9ff 100%);
+}
+
 .sidebar-nav small {
   margin-left: auto;
   background: #7ee6ff;
@@ -169,6 +173,11 @@ textarea {
 
 .sidebar-section article {
   color: var(--muted);
+}
+
+.sidebar-section.footer article {
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .sidebar.collapsed .sidebar-nav span,

@@ -1,6 +1,7 @@
 import { FileSpreadsheet, FileText, Globe, Upload, X } from "lucide-react";
 import { ChangeEvent, useMemo, useRef, useState } from "react";
 import { studyApi } from "../api/studyApi";
+import { useSubject } from "../hooks/useSubject";
 
 type PracticeSourceTab = "upload" | "paste" | "drive" | "flashcards";
 
@@ -18,6 +19,7 @@ const tabLabels: Record<PracticeSourceTab, string> = {
 };
 
 const StudyMode = ({ open, onClose, onGenerated }: StudyModeProps) => {
+  const { selectedSubject } = useSubject();
   const [tab, setTab] = useState<PracticeSourceTab>("upload");
   const [pasteText, setPasteText] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -53,8 +55,8 @@ const StudyMode = ({ open, onClose, onGenerated }: StudyModeProps) => {
     }
     setGenerating(true);
     try {
-      await studyApi.generatePracticeTest();
-      onGenerated("Practice test generated from selected material.");
+      await studyApi.generatePracticeTest(selectedSubject.id);
+      onGenerated(`Practice test generated for ${selectedSubject.name} from selected material.`);
       onClose();
       setPasteText("");
       setSelectedFiles([]);
@@ -81,7 +83,10 @@ const StudyMode = ({ open, onClose, onGenerated }: StudyModeProps) => {
 
         <div className="overlay__body">
           <h3>Generate a practice test</h3>
-          <p>Choose or upload materials to generate practice questions designed for you</p>
+          <p>
+            Subject scoped: <strong>{selectedSubject.name}</strong>. Choose or upload materials to generate
+            questions from this subject only.
+          </p>
 
           <div className="tab-row">
             {(Object.keys(tabLabels) as PracticeSourceTab[]).map((key) => (

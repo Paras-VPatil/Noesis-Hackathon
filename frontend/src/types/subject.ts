@@ -12,8 +12,3 @@ export interface FlashcardSet {
   cards: number;
   author: string;
 }
-
-export interface FolderItem {
-  id: string;
-  name: string;
-}

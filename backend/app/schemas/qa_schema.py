@@ -1,9 +1,10 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 class QARequest(BaseModel):
     subjectId: str
     query: str
+    history: Optional[List[Dict[str, str]]] = []
 
 class Citation(BaseModel):
     fileName: str

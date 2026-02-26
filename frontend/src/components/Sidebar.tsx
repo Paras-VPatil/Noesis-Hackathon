@@ -1,38 +1,31 @@
-import {
-  Bell,
-  BookOpenCheck,
-  Folder,
-  Home,
-  Library,
-  Menu,
-  Plus,
-  UsersRound
-} from "lucide-react";
-import type { FolderItem } from "../types/subject";
+import { Bell, BookOpenCheck, Home, Library, Menu } from "lucide-react";
+import type { Subject } from "../types/subject";
 
 interface SidebarProps {
   activePath: string;
-  folders: FolderItem[];
+  subjects: Subject[];
+  selectedSubjectId: string;
   collapsed: boolean;
   onToggleCollapse: () => void;
   onNavigate: (path: string) => void;
-  onAddFolder: () => void;
+  onSelectSubject: (subjectId: string) => void;
 }
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
-  { path: "/library", label: "Your library", icon: Library },
-  { path: "/study-groups", label: "Study groups", icon: UsersRound, badge: "New" },
+  { path: "/flashcards", label: "Notes Q&A", icon: BookOpenCheck },
+  { path: "/library", label: "Dashboard", icon: Library },
   { path: "/notifications", label: "Notifications", icon: Bell, alertCount: 1 }
 ];
 
 const Sidebar = ({
   activePath,
-  folders,
+  subjects,
+  selectedSubjectId,
   collapsed,
   onToggleCollapse,
   onNavigate,
-  onAddFolder
+  onSelectSubject
 }: SidebarProps) => {
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
@@ -41,7 +34,7 @@ const Sidebar = ({
           <Menu size={29} />
         </button>
         <button className="brand-icon" type="button" onClick={() => onNavigate("/")}>
-          Q
+          A
         </button>
       </div>
 
@@ -55,44 +48,31 @@ const Sidebar = ({
           >
             <item.icon size={21} />
             <span>{item.label}</span>
-            {item.badge ? <small>{item.badge}</small> : null}
             {item.alertCount ? <em>{item.alertCount}</em> : null}
           </button>
         ))}
       </nav>
 
       <section className="sidebar-section">
-        <h4>Your folders</h4>
-        <button type="button" onClick={onAddFolder}>
-          <Plus size={22} />
-          <span>New folder</span>
-        </button>
-        {folders.map((folder) => (
-          <article key={folder.id}>
-            <Folder size={18} />
-            <span>{folder.name}</span>
-          </article>
+        <h4>Subjects (fixed: 3)</h4>
+        {subjects.map((subject) => (
+          <button
+            key={subject.id}
+            type="button"
+            className={subject.id === selectedSubjectId ? "active" : ""}
+            onClick={() => onSelectSubject(subject.id)}
+          >
+            <BookOpenCheck size={18} />
+            <span>{subject.name}</span>
+          </button>
         ))}
       </section>
 
-      <section className="sidebar-section">
-        <h4>Exams</h4>
-        <button type="button" onClick={() => onNavigate("/subject/jee-main")}>
-          <BookOpenCheck size={18} />
-          <span>JEE Main</span>
-        </button>
-        <button type="button" onClick={() => onNavigate("/subject/neet")}>
-          <BookOpenCheck size={18} />
-          <span>NEET</span>
-        </button>
-      </section>
-
       <section className="sidebar-section footer">
-        <h4>Start here</h4>
-        <button type="button" onClick={() => onNavigate("/flashcards")}>
-          <BookOpenCheck size={18} />
-          <span>Flashcards</span>
-        </button>
+        <h4>Scope guard</h4>
+        <article>
+          <span>Q&A and mission are locked to the selected subject notes only.</span>
+        </article>
       </section>
     </aside>
   );
